@@ -153,22 +153,6 @@ Node* delete_node(Node* target, char* key)
     return rebalance(target);
 }
 
-void serialize(ofstream& os, Node* target) {
-    if (target == nullptr) {
-        return;
-    }
-    size_t key_size = strlen(target->key);
-    os.write((char*)&key_size, sizeof(size_t));
-    os.write(target->key, key_size * sizeof(char));
-    os.write((char*)&(target->value), sizeof(unsigned long long));
-    bool has_left = (target->left != nullptr);
-    bool has_right = (target->right != nullptr);
-    os.write((char*)&has_left, sizeof(bool));
-    os.write((char*)&has_right, sizeof(bool));
-    serialize(os, target->left);
-    serialize(os, target->right);
-}
-
 Node *get_node(Node* target, const string& key) {
     if (!target) {
         return nullptr;
@@ -184,42 +168,10 @@ Node *get_node(Node* target, const string& key) {
     }
 }
 
-Node* deserialize(ifstream& is) {
-    Node* addedNode = nullptr;
-    size_t key_size;
-    is.read((char*) &key_size, sizeof(size_t));
-    if (is.gcount() == 0) {
-        return nullptr;
-    }
-
-    char* key = new char[key_size + 1];
-    key[key_size] = 0;
-    is.read(key, sizeof(char) * key_size);
-
-    unsigned long long value;
-    is.read((char*) &value, sizeof (unsigned long long));
-
-    bool has_right = false, has_left = false;
-    is.read((char*) &has_left, sizeof(bool));
-    is.read((char*) &has_right, sizeof(bool));
-
-    addedNode = new Node(key, value);
-    delete[] key;
-    if (has_left) {
-        addedNode->left = deserialize(is);
-    }
-    if (has_right) {
-        addedNode->right = deserialize(is);
-    }
-    return addedNode;
-}
-
 enum cmd_commands{
     ADD,
     DELETE,
     GET,
-    SERIALIZE,
-    DESERIALIZE
 };
 
 cmd_commands resolve_cmd(string cmd) {
@@ -228,15 +180,6 @@ cmd_commands resolve_cmd(string cmd) {
     }
     if (cmd == "-") {
         return DELETE;
-    }
-    if (cmd == "!") {
-        cin >> cmd;
-        if (cmd == "Load") {
-            return DESERIALIZE;
-        }
-        if (cmd == "Save") {
-            return SERIALIZE;
-        }
     }
     return GET;
 }
@@ -298,23 +241,6 @@ int main() {
                         cout << "OK: " << result->value << endl;
                     }
                 }
-                break;
-            case SERIALIZE:
-                cin >> arg;
-                serialize_output.open(arg, ios::out | ios::binary);
-                serialize(serialize_output, root);
-                serialize_output.close();
-                cout << "OK" << endl;
-                break;
-            case DESERIALIZE:
-                cin >> arg;
-                deserialize_input.open(arg, ios::in | ios::binary);
-
-                delete root;
-
-                root = deserialize(deserialize_input);
-                deserialize_input.close();
-                cout << "OK" << endl;
                 break;
         }
     }
